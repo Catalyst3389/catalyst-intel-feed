@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catalyst Threat Intelligence</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-2: #182235;
+      --text: #e6edf7;
+      --muted: #9fb0c8;
+      --border: #263247;
+      --high: #ff5d5d;
+      --medium: #ffb84d;
+      --info: #63b3ff;
+      --accent: #4cc2ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #09111d 0%, #0b1220 100%);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    .hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+      letter-spacing: 0.3px;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .search,
+    .filter {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      min-width: 120px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .feed {
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .card-top {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+
+    .HIGH { background: rgba(255, 93, 93, 0.16); color: var(--high); border: 1px solid rgba(255, 93, 93, 0.35); }
+    .MEDIUM { background: rgba(255, 184, 77, 0.16); color: var(--medium); border: 1px solid rgba(255, 184, 77, 0.35); }
+    .INFO { background: rgba(99, 179, 255, 0.16); color: var(--info); border: 1px solid rgba(99, 179, 255, 0.35); }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .title {
+      margin: 0 0 10px;
+      font-size: 1.08rem;
+      line-height: 1.4;
+    }
+
+    .title a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .title a:hover {
+      color: var(--accent);
+    }
+
+    .desc {
+      color: #c7d3e4;
+      line-height: 1.5;
+      font-size: 0.93rem;
+      margin-bottom: 12px;
+    }
+
+    .bottom {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .source {
+      color: var(--muted);
+      font-size: 0.84rem;
+      word-break: break-all;
+    }
+
+    .readmore {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 30px 10px;
+    }
+
+    @media (max-width: 700px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <h1>Catalyst Threat Intelligence</h1>
+        <div class="sub">Your curated cyber intel dashboard</div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="./feed.xml" target="_blank" rel="noopener noreferrer">Open Raw RSS</a>
+        <a class="btn" href="https://github.com/Catalyst3389/catalyst-intel-feed" target="_blank" rel="noopener noreferrer">Repo</a>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Total</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">High</div>
+        <div class="stat-value" id="stat-high">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Medium</div>
+        <div class="stat-value" id="stat-medium">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Info</div>
+        <div class="stat-value" id="stat-info">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" class="search" type="text" placeholder="Search titles, descriptions, sources..." />
+      <select id="severityFilter" class="filter">
+        <option value="ALL">All severities</option>
+        <option value="HIGH">High only</option>
+        <option value="MEDIUM">Medium only</option>
+        <option value="INFO">Info only</option>
+      </select>
+    </div>
+
+    <div id="feed" class="feed"></div>
+  </div>
+
+  <script>
+    const FEED_URL = "./feed.xml";
+    let allItems = [];
+
+    function stripHtml(html) {
+      const doc = new DOMParser().parseFromString(html || "", "text/html");
+      return (doc.body.textContent || "").trim();
+    }
+
+    function parseSeverity(title, category) {
+      const cat = (category || "").toUpperCase().trim();
+      if (["HIGH", "MEDIUM", "INFO"].includes(cat)) return cat;
+
+      const match = (title || "").match(/^\[(HIGH|MEDIUM|INFO)\]/i);
+      return match ? match[1].toUpperCase() : "INFO";
+    }
+
+    function cleanTitle(title) {
+      return (title || "").replace(/^\[(HIGH|MEDIUM|INFO)\]\s*/i, "").trim();
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      if (isNaN(date)) return dateStr || "";
+      return date.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function extractSource(description) {
+      const match = (description || "").match(/^Source:\s*(.+?)(\n|$)/i);
+      return match ? match[1].trim() : "";
+    }
+
+    function cleanDescription(description) {
+      let text = stripHtml(description);
+      text = text.replace(/^Source:\s*.+?(\n|$)/i, "").trim();
+      return text;
+    }
+
+    function updateStats(items) {
+      document.getElementById("stat-total").textContent = items.length;
+      document.getElementById("stat-high").textContent = items.filter(i => i.severity === "HIGH").length;
+      document.getElementById("stat-medium").textContent = items.filter(i => i.severity === "MEDIUM").length;
+      document.getElementById("stat-info").textContent = items.filter(i => i.severity === "INFO").length;
+    }
+
+    function render(items) {
+      const container = document.getElementById("feed");
+      updateStats(items);
+
+      if (!items.length) {
+        container.innerHTML = '<div class="empty">No matching items.</div>';
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <article class="card">
+          <div class="card-top">
+            <span class="badge ${item.severity}">${item.severity}</span>
+            <div class="meta">${item.pubDate ? formatDate(item.pubDate) : ""}</div>
+          </div>
+
+          <h2 class="title">
+            <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+          </h2>
+
+          <div class="desc">${item.description || "No description available."}</div>
+
+          <div class="bottom">
+            <div class="source">${item.source || ""}</div>
+            <a class="readmore" href="${item.link}" target="_blank" rel="noopener noreferrer">Read article →</a>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function applyFilters() {
+      const search = document.getElementById("search").value.toLowerCase().trim();
+      const severity = document.getElementById("severityFilter").value;
+
+      let filtered = [...allItems];
+
+      if (severity !== "ALL") {
+        filtered = filtered.filter(item => item.severity === severity);
+      }
+
+      if (search) {
+        filtered = filtered.filter(item =>
+          item.title.toLowerCase().includes(search) ||
+          item.description.toLowerCase().includes(search) ||
+          item.source.toLowerCase().includes(search)
+        );
+      }
+
+      render(filtered);
+    }
+
+    async function loadFeed() {
+      try {
+        const response = await fetch(FEED_URL + "?t=" + Date.now());
+        const xmlText = await response.text();
+        const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+
+        const items = [...xml.querySelectorAll("item")].map(item => {
+          const rawTitle = item.querySelector("title")?.textContent || "";
+          const category = item.querySelector("category")?.textContent || "";
+          const descriptionRaw = item.querySelector("description")?.textContent || "";
+          return {
+            title: cleanTitle(rawTitle),
+            severity: parseSeverity(rawTitle, category),
+            link: item.querySelector("link")?.textContent || "#",
+            pubDate: item.querySelector("pubDate")?.textContent || "",
+            source: extractSource(descriptionRaw),
+            description: cleanDescription(descriptionRaw)
+          };
+        });
+
+        allItems = items;
+        render(allItems);
+      } catch (error) {
+        document.getElementById("feed").innerHTML =
+          '<div class="empty">Failed to load feed. Check that feed.xml is reachable.</div>';
+        console.error(error);
+      }
+    }
+
+    document.getElementById("search").addEventListener("input", applyFilters);
+    document.getElementById("severityFilter").addEventListener("change", applyFilters);
+
+    loadFeed();
+  </script>
+</body>
+</html>
