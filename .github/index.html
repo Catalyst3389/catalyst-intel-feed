@@ -275,11 +275,91 @@ body::before {
 .tile[data-sev="MEDIUM"] { --tile-color: var(--medium); }
 .tile[data-sev="INFO"] { --tile-color: var(--info); }
 
-/* ---------- search row ---------- */
-.searchrow {
-  position: relative;
+/* ---------- controls row ---------- */
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
   margin-bottom: 22px;
 }
+.searchrow {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-solid);
+  border: 1px solid var(--panel-edge);
+  border-radius: 12px;
+  padding: 4px 4px 4px 12px;
+  flex-shrink: 0;
+}
+.sort-label {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-right: 4px;
+}
+.sort-btn {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sort-btn:hover { color: var(--text); }
+.sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sort-btn.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---------- load more ---------- */
+.loadmore-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+.loadmore {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.6px;
+  color: var(--text);
+  background: var(--panel-solid);
+  border: 1px solid var(--panel-edge);
+  border-radius: 12px;
+  padding: 13px 26px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.18s ease;
+}
+.loadmore:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+.loadmore:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.loadmore-count {
+  font-size: 0.72rem;
+  color: var(--faint);
+  padding-left: 10px;
+  border-left: 1px solid var(--panel-edge);
+}
+
+/* ---------- search ---------- */
 .search {
   width: 100%;
   background: var(--panel-solid);
@@ -438,6 +518,8 @@ body::before {
 
 @media (max-width: 820px) {
   .hero { grid-template-columns: 1fr; }
+  .controls { flex-direction: column; }
+  .sort { justify-content: flex-start; overflow-x: auto; }
 }
 @media (max-width: 540px) {
   .level-name { font-size: 1.7rem; }
@@ -515,11 +597,19 @@ body::before {
     </div>
   </section>
 
-  <!-- search -->
-  <div class="searchrow">
-    <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-    <input id="search" class="search" type="text" placeholder="Search titles, descriptions, sources…" autocomplete="off" />
-    <span class="result-count" id="result-count"></span>
+  <!-- controls -->
+  <div class="controls">
+    <div class="searchrow">
+      <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" class="search" type="text" placeholder="Search titles, descriptions, sources…" autocomplete="off" />
+      <span class="result-count" id="result-count"></span>
+    </div>
+    <div class="sort" role="group" aria-label="Sort order">
+      <span class="sort-label">Sort</span>
+      <button class="sort-btn active" data-sort="severity" aria-pressed="true">Severity</button>
+      <button class="sort-btn" data-sort="newest" aria-pressed="false">Newest</button>
+      <button class="sort-btn" data-sort="oldest" aria-pressed="false">Oldest</button>
+    </div>
   </div>
 
   <!-- feed -->
@@ -527,13 +617,25 @@ body::before {
     <div class="loading"><div class="spinner"></div>Establishing feed…</div>
   </div>
 
+  <!-- load more -->
+  <div class="loadmore-wrap" id="loadmore-wrap" hidden>
+    <button class="loadmore" id="loadmore">
+      <span id="loadmore-text">Load more</span>
+      <span class="loadmore-count" id="loadmore-count"></span>
+    </button>
+  </div>
+
 </div>
 
 <script>
 const FEED_URL = "./feed.xml";
 const SEV_ORDER = { HIGH: 0, MEDIUM: 1, INFO: 2 };
+const PAGE_SIZE = 20;
 let allItems = [];
 let activeSev = "ALL";
+let activeSort = "severity";
+let currentFiltered = [];
+let visibleCount = PAGE_SIZE;
 
 /* ---------- parsing helpers (unchanged data wiring) ---------- */
 function stripHtml(html) {
@@ -617,16 +719,37 @@ function updateStats(items) {
   document.getElementById("stat-info").textContent = items.filter(i => i.severity === "INFO").length;
 }
 
-function render(items) {
+function sortItems(items) {
+  const arr = [...items];
+  if (activeSort === "newest") {
+    arr.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+  } else if (activeSort === "oldest") {
+    arr.sort((a, b) => new Date(a.pubDate) - new Date(b.pubDate));
+  } else {
+    // severity: highest first, then newest within a severity
+    arr.sort((a, b) => {
+      const s = SEV_ORDER[a.severity] - SEV_ORDER[b.severity];
+      if (s !== 0) return s;
+      return new Date(b.pubDate) - new Date(a.pubDate);
+    });
+  }
+  return arr;
+}
+
+function render() {
   const container = document.getElementById("feed");
   const rc = document.getElementById("result-count");
-  rc.textContent = items.length ? `${items.length} shown` : "";
+  const total = currentFiltered.length;
+  rc.textContent = total ? `${total} shown` : "";
 
-  if (!items.length) {
+  if (!total) {
     container.innerHTML = '<div class="empty">No items match the current view. Clear the search or pick another severity.</div>';
+    document.getElementById("loadmore-wrap").hidden = true;
     return;
   }
-  container.innerHTML = items.map((item, idx) => `
+
+  const slice = currentFiltered.slice(0, visibleCount);
+  container.innerHTML = slice.map((item, idx) => `
     <article class="card" data-sev="${item.severity}" style="animation-delay:${Math.min(idx * 35, 350)}ms">
       <div class="card-top">
         <span class="badge">${item.severity}</span>
@@ -640,9 +763,20 @@ function render(items) {
       </div>
     </article>
   `).join("");
+
+  // load more button
+  const wrap = document.getElementById("loadmore-wrap");
+  const remaining = total - slice.length;
+  if (remaining > 0) {
+    wrap.hidden = false;
+    document.getElementById("loadmore-count").textContent =
+      `${slice.length} of ${total}`;
+  } else {
+    wrap.hidden = true;
+  }
 }
 
-function applyFilters() {
+function applyFilters(resetPage = true) {
   const search = document.getElementById("search").value.toLowerCase().trim();
   let filtered = [...allItems];
   if (activeSev !== "ALL") filtered = filtered.filter(i => i.severity === activeSev);
@@ -653,7 +787,9 @@ function applyFilters() {
       i.source.toLowerCase().includes(search)
     );
   }
-  render(filtered);
+  currentFiltered = sortItems(filtered);
+  if (resetPage) visibleCount = PAGE_SIZE;
+  render();
 }
 
 /* tile = filter */
@@ -669,7 +805,26 @@ document.querySelectorAll(".tile").forEach(tile => {
   });
 });
 
-document.getElementById("search").addEventListener("input", applyFilters);
+document.getElementById("search").addEventListener("input", () => applyFilters(true));
+
+/* sort toggle */
+document.querySelectorAll(".sort-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    activeSort = btn.dataset.sort;
+    document.querySelectorAll(".sort-btn").forEach(b => {
+      const on = b === btn;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    applyFilters(true);
+  });
+});
+
+/* load more */
+document.getElementById("loadmore").addEventListener("click", () => {
+  visibleCount += PAGE_SIZE;
+  render();
+});
 
 /* live clock */
 function tickClock() {
@@ -700,13 +855,6 @@ async function loadFeed() {
       };
     });
 
-    // highest severity first, then newest
-    items.sort((a, b) => {
-      const s = SEV_ORDER[a.severity] - SEV_ORDER[b.severity];
-      if (s !== 0) return s;
-      return new Date(b.pubDate) - new Date(a.pubDate);
-    });
-
     allItems = items;
     updateStats(items);
     setPosture(items);
@@ -716,7 +864,7 @@ async function loadFeed() {
       ? "Feed updated " + relativeTime(build) + " · " + formatDate(build)
       : "";
 
-    applyFilters();
+    applyFilters(true);
   } catch (error) {
     document.getElementById("feed").innerHTML =
       '<div class="empty">Could not reach feed.xml. Confirm GitHub Pages is enabled and the feed has published.</div>';
