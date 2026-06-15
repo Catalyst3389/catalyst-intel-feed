@@ -54,7 +54,7 @@ KEYWORDS = [
     "data breach",
 ]
 
-MAX_ITEMS = 50
+MAX_ITEMS = 150
 
 
 def is_relevant(title: str, source_url: str) -> bool:
