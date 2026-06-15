@@ -574,22 +574,22 @@ body::before {
     </div>
 
     <div class="tiles">
-      <button class="tile active" data-sev="ALL" aria-pressed="true">
+      <button type="button" class="tile active" data-sev="ALL" aria-pressed="true">
         <span class="bar"></span>
         <span class="k"><span class="swatch"></span>Total tracked</span>
         <span class="v" id="stat-total">0</span>
       </button>
-      <button class="tile" data-sev="HIGH" aria-pressed="false">
+      <button type="button" class="tile" data-sev="HIGH" aria-pressed="false">
         <span class="bar"></span>
         <span class="k"><span class="swatch"></span>High</span>
         <span class="v" id="stat-high">0</span>
       </button>
-      <button class="tile" data-sev="MEDIUM" aria-pressed="false">
+      <button type="button" class="tile" data-sev="MEDIUM" aria-pressed="false">
         <span class="bar"></span>
         <span class="k"><span class="swatch"></span>Medium</span>
         <span class="v" id="stat-medium">0</span>
       </button>
-      <button class="tile" data-sev="INFO" aria-pressed="false">
+      <button type="button" class="tile" data-sev="INFO" aria-pressed="false">
         <span class="bar"></span>
         <span class="k"><span class="swatch"></span>Info</span>
         <span class="v" id="stat-info">0</span>
@@ -606,9 +606,9 @@ body::before {
     </div>
     <div class="sort" role="group" aria-label="Sort order">
       <span class="sort-label">Sort</span>
-      <button class="sort-btn active" data-sort="severity" aria-pressed="true">Severity</button>
-      <button class="sort-btn" data-sort="newest" aria-pressed="false">Newest</button>
-      <button class="sort-btn" data-sort="oldest" aria-pressed="false">Oldest</button>
+      <button type="button" class="sort-btn active" data-sort="severity" aria-pressed="true">Severity</button>
+      <button type="button" class="sort-btn" data-sort="newest" aria-pressed="false">Newest</button>
+      <button type="button" class="sort-btn" data-sort="oldest" aria-pressed="false">Oldest</button>
     </div>
   </div>
 
@@ -619,7 +619,7 @@ body::before {
 
   <!-- load more -->
   <div class="loadmore-wrap" id="loadmore-wrap" hidden>
-    <button class="loadmore" id="loadmore">
+    <button type="button" class="loadmore" id="loadmore">
       <span id="loadmore-text">Load more</span>
       <span class="loadmore-count" id="loadmore-count"></span>
     </button>
@@ -821,9 +821,14 @@ document.querySelectorAll(".sort-btn").forEach(btn => {
 });
 
 /* load more */
-document.getElementById("loadmore").addEventListener("click", () => {
+document.getElementById("loadmore").addEventListener("click", (e) => {
+  e.preventDefault();
   visibleCount += PAGE_SIZE;
-  render();
+  try {
+    render();
+  } catch (err) {
+    console.error("Load more render failed:", err);
+  }
 });
 
 /* live clock */
