@@ -1,7 +1,16 @@
 import feedparser
+import requests
 from xml.etree.ElementTree import Element, SubElement, ElementTree
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
+
+# How long to wait for any single feed before giving up on it (seconds).
+FEED_TIMEOUT = 20
+# Some sources (esp. government sites) reject the default Python user-agent.
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 CatalystIntel/1.0"
+)
 
 FEEDS = [
     # --- existing sources ---
@@ -107,14 +116,42 @@ def normalise_date(entry) -> tuple[str, datetime]:
     return dt.strftime("%a, %d %b %Y %H:%M:%S GMT"), dt
 
 
+def fetch_one(url: str):
+    """Fetch a single feed with a timeout and browser UA. Returns a parsed
+    feed, or None if it failed. Never raises — failures are logged and skipped
+    so one bad source can't take down the whole run."""
+    try:
+        resp = requests.get(
+            url,
+            timeout=FEED_TIMEOUT,
+            headers={"User-Agent": USER_AGENT},
+        )
+        resp.raise_for_status()
+    except requests.exceptions.Timeout:
+        print(f"  SKIP (timeout after {FEED_TIMEOUT}s): {url}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"  SKIP (request error: {e}): {url}")
+        return None
+    # Parse from the fetched bytes, not by handing the URL back to feedparser.
+    feed = feedparser.parse(resp.content)
+    if getattr(feed, "bozo", 0) and not feed.entries:
+        print(f"  SKIP (unparseable / no entries): {url}")
+        return None
+    return feed
+
+
 def fetch_entries() -> list[dict]:
     entries = []
     seen_links = set()
+    failed = []
     for url in FEEDS:
         print(f"Fetching: {url}")
-        feed = feedparser.parse(url)
-        if getattr(feed, "bozo", 0):
-            print(f"Warning: feed parse issue for {url}")
+        feed = fetch_one(url)
+        if feed is None:
+            failed.append(url)
+            continue
+        count_before = len(entries)
         for item in feed.entries:
             title = item.get("title", "").strip()
             link = item.get("link", "").strip()
@@ -135,6 +172,12 @@ def fetch_entries() -> list[dict]:
                 "description": item.get("summary", "")[:500],
             })
             seen_links.add(link)
+        print(f"  +{len(entries) - count_before} item(s)")
+
+    if failed:
+        print(f"\n{len(failed)} feed(s) failed and were skipped:")
+        for f in failed:
+            print(f"  - {f}")
     entries.sort(key=lambda x: x["pub_dt"], reverse=True)
     return entries[:MAX_ITEMS]
 
@@ -168,11 +211,20 @@ def build_rss(entries: list[dict]) -> None:
     tree.write("feed.xml", encoding="utf-8", xml_declaration=True)
 
 
-def main() -> None:
+def main() -> int:
     entries = fetch_entries()
+    if not entries:
+        # Every feed failed. Don't overwrite a good feed.xml with an empty one;
+        # exit non-zero so the failure is visible, but leave the last good feed
+        # in place for the dashboard.
+        print("ERROR: no items fetched from any source. Leaving existing feed.xml untouched.")
+        return 1
     build_rss(entries)
     print(f"Done. Generated feed.xml with {len(entries)} items.")
+    return 0
 
 
 if __name__ == "__main__":
+    import sys
+    sys.exit(main())
     main()
