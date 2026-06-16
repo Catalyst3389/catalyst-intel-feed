@@ -22,7 +22,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependency
-        run: pip install feedparser
+        run: pip install feedparser requests
 
       - name: Generate RSS feed
         run: python generate_feed.py
